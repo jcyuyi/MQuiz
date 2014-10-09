@@ -22,7 +22,11 @@ namespace MQuiz
         //current quiz
         Quiz quiz;
         int score;
-        float time;
+        float time; //current time
+        int timeInterval;
+
+        string statusMsg;
+        bool isStarted = false;
         System.Windows.Threading.DispatcherTimer dispatcherTimer;
 
         public MainWindow()
@@ -31,40 +35,51 @@ namespace MQuiz
             sliderTimeInterval.ValueChanged += sliderTimeInterval_ValueChanged;
             cbLimitedTime.Checked += cbLimitedTime_Checked;
             cbLimitedTime.Unchecked += cbLimitedTime_Unchecked;
-            btnStart_Click(null, null);
+
+            //init dispatcherTimer
             dispatcherTimer = new System.Windows.Threading.DispatcherTimer();
             dispatcherTimer.Tick += new EventHandler(dispatcherTimer_Tick);
-            dispatcherTimer.Interval = new TimeSpan(0,0,0,0,100); //0.1s
-            dispatcherTimer.Start();
+            dispatcherTimer.Interval = new TimeSpan(0,0,0,0,100); //call Tick every 0.1s
+            
+            statusMsg = "Ready. ";
+
+            //btnStart_Click(null, null);
         }
 
         private void dispatcherTimer_Tick(object sender, EventArgs e)
         {
-            time += 0.1f; //curreent sec
-            int timeInterval = Convert.ToInt32(tbTimeInterval.Text);
+            time += 0.1f; //curreent sec 
             pbTime.Value = (float)time / timeInterval * 100;
+            if (pbTime.Value > 99.9) //finished
+            {
+                nextQuiz();
+            }
         }
 
 
 
         private void btnStart_Click(object sender, RoutedEventArgs e)
         {
+            isStarted = true;
             score = 0;
             lbScore.Content = score.ToString();
-            lbStatues.Content = "Ready";
+            statusMsg = "New game started. ";
+            timeInterval = Convert.ToInt32(tbTimeInterval.Text);
+            btnEnter.IsEnabled = true;
+            lbStatues.Background = null;
             nextQuiz();
             tbAns.SelectAll();
         }
+
         private void nextQuiz()
-        {
-            
+        {     
             try
             {
                 int rangeFrom = Convert.ToInt32(tbRangeFrom.Text);
                 int rangeTo = Convert.ToInt32(tbRangeTo.Text);
                 if (rangeFrom >= rangeTo)
                 {
-                    throw new Exception("range must contain at least two numbers");
+                    throw new Exception("Range must contain at least two numbers");
                 }
                 int timeInterval = Convert.ToInt32(tbTimeInterval.Text);
                 Quiz.QuizType quizType;
@@ -79,16 +94,29 @@ namespace MQuiz
                 
                 //set quiz
                 lbQuiz.Content = quiz.question;
-                lbStatues.Content = lbStatues.Content.ToString() +
-                    " - The next question is worth " +
-                    quiz.score +
+                lbStatues.Content = statusMsg +
+                    "The next question is worth "  +
+                    quiz.score                +
                     "points!";
+
+                //Set timer
+                if (Convert.ToBoolean( cbLimitedTime.IsChecked))
+                {
+                    time = 0; //reset current time
+                    dispatcherTimer.Start();
+                    //Set timer visiblity
+                    if (pbTime.Visibility == System.Windows.Visibility.Hidden)
+                    {
+                        pbTime.Visibility = System.Windows.Visibility.Visible; ;
+                    }
+                }
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message);
             }
         }
+
         private void sliderTimeInterval_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             tbTimeInterval.Text = sliderTimeInterval.Value.ToString();
@@ -96,15 +124,21 @@ namespace MQuiz
 
         private void btnEnter_Click(object sender, RoutedEventArgs e)
         {
+            if (!isStarted)
+            {
+                return;
+            }
             if (quiz.answer == tbAns.Text) //answer is right
             {
                 score += quiz.score;
                 lbScore.Content = score.ToString();
-                lbStatues.Content = "Congradulations!";
+                lbStatues.Background = Brushes.Green;
+                statusMsg = "Congradulations! ";
             }
             else //answer if wrong
             {
-                lbStatues.Content = "Wrong answer.";
+                statusMsg = "Wrong answer. ";
+                lbStatues.Background = Brushes.Red;
             }
             //next 
             nextQuiz();
@@ -122,12 +156,15 @@ namespace MQuiz
 
         private void cbLimitedTime_Checked(object sender, RoutedEventArgs e)
         {
-            pbTime.Visibility = System.Windows.Visibility.Visible;
+            //pbTime.Visibility = System.Windows.Visibility.Visible;
+            //nextQuiz(); //start a new quiz
         }
 
         private void cbLimitedTime_Unchecked(object sender, RoutedEventArgs e)
         {
             pbTime.Visibility = System.Windows.Visibility.Hidden;
+            //stop the timer
+            dispatcherTimer.Stop();
         }
 
     }

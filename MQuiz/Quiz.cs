@@ -98,7 +98,7 @@ namespace MQuiz
         private static Quiz getDivision(int rangeFrom, int rangeTo)
         {
             Quiz quiz = new Quiz();
-            int div1 = 1;
+            int div1 = MRandom.getRandomNumber(rangeFrom, rangeTo);
             //div1 should not be 0
             while (div1 == 0)
             {
